@@ -212,6 +212,52 @@ export const QUESTION_BANK: Question[] = [
     ],
     explanation: "### Approach\nWe use **Breadth-First Search (BFS)** with a Queue. The key is to process nodes level by level. We capture the `queue.length` at the start of the loop to determine how many nodes are in the current level, process them, and add their children to the back of the queue.\n\n### Time Complexity\n**O(n)**. Each node is processed exactly once.\n\n### Space Complexity\n**O(n)** for the queue, which stores at most one level of nodes (max width of the tree)."
   },
+  {
+    title: "Group Anagrams",
+    difficulty: "Medium",
+    topic: "Hash Maps",
+    description: "Given an array of strings `strs`, group the anagrams together. You can return the answer in any order.",
+    codeTemplate: `function groupAnagrams(strs: string[]): string[][] {
+  const map = new Map<string, string[]>();
+
+  for (const s of strs) {
+    // Create a frequency key (size 26 for a-z)
+    const count = new Array(26).fill(0);
+    for (const c of s) {
+      count[c.charCodeAt(0) - 97]++;
+    }
+    
+    // Convert count array to a unique string key
+    const key = {{SLOT_1}};
+
+    if (!map.has(key)) {
+      map.set(key, []);
+    }
+    map.get(key)!.push(s);
+  }
+
+  return {{SLOT_2}};
+}`,
+    slots: [
+      {
+        id: "{{SLOT_1}}",
+        options: [
+          { id: "ga_1", code: "count.join('#')", isCorrect: true },
+          { id: "ga_2", code: "s.split('').sort().join('')", isCorrect: false },
+          { id: "ga_3", code: "count.toString()", isCorrect: false }
+        ]
+      },
+      {
+        id: "{{SLOT_2}}",
+        options: [
+          { id: "ga2_1", code: "Array.from(map.values())", isCorrect: true },
+          { id: "ga2_2", code: "Array.from(map.keys())", isCorrect: false },
+          { id: "ga2_3", code: "[...map.entries()]", isCorrect: false }
+        ]
+      }
+    ],
+    explanation: "### Approach\nWe use a **Hash Map** to group strings. The key challenge is generating a unique key for all anagrams. We use a character count array (size 26) transformed into a string (e.g., using a delimiter like '#') as the key. Strings with the same character counts are anagrams.\n\n### Time Complexity\n**O(N * K)**, where N is the number of strings and K is the maximum length of a string.\n\n### Space Complexity\n**O(N * K)** to store the groups."
+  },
 
   // --- HARD QUESTIONS ---
   {
@@ -321,7 +367,7 @@ export const QUESTION_BANK: Question[] = [
 
 export const generateQuestion = async (difficulty: string = "Medium", history: string[] = []): Promise<Question> => {
   // Simulate network delay for a realistic "loading" feel
-  await new Promise(resolve => setTimeout(resolve, 800));
+  await new Promise(resolve => setTimeout(resolve, 200));
 
   // Filter questions by difficulty
   const pool = QUESTION_BANK.filter(q => q.difficulty === difficulty);
