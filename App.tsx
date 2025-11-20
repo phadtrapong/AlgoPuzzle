@@ -77,6 +77,26 @@ const App: React.FC = () => {
     }
   }, [difficulty, seenTitles]);
 
+  const handleQuestionSelect = (q: Question) => {
+    setQuestion(q);
+    setDifficulty(q.difficulty);
+    setSelections({});
+    setValidationResults({});
+    setGameState('playing');
+    setShowDashboard(false);
+    
+    if (q.slots.length > 0) {
+      setActiveSlotId(q.slots[0].id);
+    } else {
+      setActiveSlotId(null);
+    }
+
+    // Ensure it's marked as seen
+    if (!seenTitles.includes(q.title)) {
+        setSeenTitles(prev => [...prev, q.title]);
+    }
+  };
+
   // Initial Load
   useEffect(() => {
     // Only fetch if we haven't loaded one yet (strict mode safety)
@@ -212,6 +232,7 @@ const App: React.FC = () => {
         isOpen={showDashboard} 
         onClose={() => setShowDashboard(false)} 
         history={history} 
+        onSelectQuestion={handleQuestionSelect}
       />
 
       {/* Header */}

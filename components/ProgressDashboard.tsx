@@ -1,13 +1,14 @@
 import React, { useState, useMemo } from 'react';
-import { HistoryItem } from '../types';
+import { HistoryItem, Question } from '../types';
 import { QUESTION_BANK } from '../services/geminiService';
-import { Trophy, BookOpen, X, ChevronDown, ChevronUp, Check, Star, Lock, Zap, Crown, Map, FileCode2 } from 'lucide-react';
+import { Trophy, BookOpen, X, ChevronDown, ChevronUp, Check, Lock, Zap, Crown, Map, FileCode2, Code } from 'lucide-react';
 import MarkdownLite from './MarkdownLite';
 
 interface ProgressDashboardProps {
   isOpen: boolean;
   onClose: () => void;
   history: HistoryItem[];
+  onSelectQuestion: (question: Question) => void;
 }
 
 // Define the roadmap structure (The "75" style path)
@@ -58,7 +59,7 @@ const ROADMAP_STRUCTURE = {
   }
 };
 
-const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ isOpen, onClose, history }) => {
+const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ isOpen, onClose, history, onSelectQuestion }) => {
   const [activeTab, setActiveTab] = useState<'path' | 'review'>('path');
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
 
@@ -144,14 +145,18 @@ const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ isOpen, onClose, 
                       style={{ 
                         height: '90px',
                         background: isSolved ? themeColor : '#262626',
-                        // Use a slight rotation to connect the zig-zags visually? 
-                        // Keep it simple vertical for now to avoid complexity, sticking to the Duolingo "stepping stone" vibe
                       }}
                    ></div>
                  )}
 
                  {/* Node Circle */}
-                 <div className={`
+                 <div 
+                 onClick={() => {
+                    if (!isLocked && questionData) {
+                        onSelectQuestion(questionData);
+                    }
+                 }}
+                 className={`
                     w-20 h-20 rounded-full flex items-center justify-center border-b-4 transition-all duration-300
                     ${isSolved ? 'bg-neutral-800 border-neutral-950 cursor-pointer ring-4' : ''}
                     ${isCurrent ? `${themeColor} border-black/20 cursor-pointer active:border-b-0 active:translate-y-1 shadow-[0_0_30px_rgba(255,255,255,0.15)] scale-110` : ''}
@@ -165,7 +170,7 @@ const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ isOpen, onClose, 
                     {isSolved && <Check className="w-10 h-10" style={{ color: themeColor }} strokeWidth={4} />}
                     {isCurrent && (
                       <div className="relative">
-                         <Star className="w-10 h-10 text-white fill-current animate-pulse" />
+                         <Code className="w-10 h-10 text-white animate-pulse" strokeWidth={3} />
                          {/* "START" Bubble */}
                          <div className="absolute -top-16 left-1/2 -translate-x-1/2 bg-white text-black text-sm font-extrabold px-4 py-2 rounded-xl whitespace-nowrap shadow-xl animate-bounce z-20 border-2 border-neutral-200">
                            START
