@@ -1,0 +1,5 @@
+{
+  "name": "AlgoPuzzle",
+  "description": "A LeetCode-style jigsaw game for practicing Google interview coding questions. Fill in the missing code blocks to solve algorithmic challenges.",
+  "requestFramePermissions": []
+}
