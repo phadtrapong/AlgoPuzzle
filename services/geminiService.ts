@@ -2,7 +2,7 @@ import { Question } from "../types";
 
 // A curated list of questions to form the "Learning Path"
 // This replaces the dynamic generation to ensure quality and specific progression.
-const QUESTION_BANK: Question[] = [
+export const QUESTION_BANK: Question[] = [
   // --- EASY QUESTIONS ---
   {
     title: "Two Sum",

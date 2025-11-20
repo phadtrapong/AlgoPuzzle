@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { HistoryItem } from '../types';
-import { Trophy, Target, BookOpen, X, ChevronDown, ChevronUp, Calendar, CheckCircle2, Map, Lock, Star } from 'lucide-react';
+import { QUESTION_BANK } from '../services/geminiService';
+import { Trophy, BookOpen, X, ChevronDown, ChevronUp, Check, Star, Lock, Zap, Crown, Map, FileCode2 } from 'lucide-react';
 import MarkdownLite from './MarkdownLite';
 
 interface ProgressDashboardProps {
@@ -9,10 +10,52 @@ interface ProgressDashboardProps {
   history: HistoryItem[];
 }
 
-const GOALS = {
-  Easy: 15,
-  Medium: 25,
-  Hard: 10
+// Define the roadmap structure (The "75" style path)
+const ROADMAP_STRUCTURE = {
+  Easy: {
+    title: "Phase 1: Essentials",
+    subtitle: "Arrays, Strings & Hash Maps",
+    topics: [
+      "Two Sum", 
+      "Valid Palindrome", 
+      "Valid Anagram", 
+      "Best Time to Buy Stock", 
+      "Valid Parentheses", 
+      "Binary Search", 
+      "Linked List Cycle", 
+      "Invert Binary Tree"
+    ]
+  },
+  Medium: {
+    title: "Phase 2: Core Algorithms",
+    subtitle: "Trees, Graphs & Heaps",
+    topics: [
+      "Maximum Subarray", 
+      "Container With Most Water", 
+      "Level Order Traversal", 
+      "Product of Array Except Self", 
+      "Group Anagrams", 
+      "Top K Frequent Elements", 
+      "Longest Consecutive Sequence", 
+      "Number of Islands",
+      "Clone Graph",
+      "Pacific Atlantic Water Flow"
+    ]
+  },
+  Hard: {
+    title: "Phase 3: Advanced Mastery",
+    subtitle: "Dynamic Programming & System Design",
+    topics: [
+      "Trapping Rain Water", 
+      "Merge k Sorted Lists", 
+      "Median of Two Sorted Arrays", 
+      "Word Ladder", 
+      "Largest Rectangle in Histogram", 
+      "Serialize Binary Tree", 
+      "N-Queens",
+      "Alien Dictionary"
+    ]
+  }
 };
 
 const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ isOpen, onClose, history }) => {
@@ -21,240 +64,266 @@ const ProgressDashboard: React.FC<ProgressDashboardProps> = ({ isOpen, onClose, 
 
   // Calculate Stats
   const stats = useMemo(() => {
-    const counts = { Easy: 0, Medium: 0, Hard: 0 };
-    const topics: Record<string, number> = {};
-
-    history.forEach(item => {
-      // Difficulty Count
-      if (counts[item.question.difficulty] !== undefined) {
-        counts[item.question.difficulty]++;
-      }
-      // Topic Count
-      const topic = item.question.topic || 'General';
-      topics[topic] = (topics[topic] || 0) + 1;
-    });
-
     const totalSolved = history.length;
-    const totalGoal = GOALS.Easy + GOALS.Medium + GOALS.Hard;
-    const overallProgress = Math.min(100, Math.round((totalSolved / totalGoal) * 100));
-
-    return { counts, topics, totalSolved, overallProgress };
+    const streak = totalSolved > 0 ? 1 : 0; // Simple streak logic
+    return { totalSolved, streak };
   }, [history]);
 
   if (!isOpen) return null;
 
+  // Helper to render a "Phase" header
+  const PhaseHeader = ({ color, title, description, progress, total }: { color: string, title: string, description: string, progress: number, total: number }) => (
+    <div className={`rounded-2xl p-5 mb-8 flex items-center justify-between border-b-4 text-white shadow-lg relative overflow-hidden`}
+         style={{ backgroundColor: color, borderColor: 'rgba(0,0,0,0.2)' }}>
+      <div className="relative z-10">
+        <h3 className="text-2xl font-extrabold tracking-tight uppercase">{title}</h3>
+        <p className="opacity-90 font-medium text-sm mt-1">{description}</p>
+        <div className="mt-3 inline-block bg-black/20 px-3 py-1 rounded-lg text-xs font-bold">
+          {progress} / {total} COMPLETED
+        </div>
+      </div>
+      <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-20">
+        <FileCode2 className="w-24 h-24" />
+      </div>
+    </div>
+  );
+
+  // Helper to render the roadmap path
+  const RoadmapPhase = ({ 
+    difficulty, 
+    themeColor 
+  }: { 
+    difficulty: 'Easy' | 'Medium' | 'Hard', 
+    themeColor: string
+  }) => {
+    const config = ROADMAP_STRUCTURE[difficulty];
+    const solved = history.filter(h => h.question.difficulty === difficulty);
+    const solvedCount = solved.length;
+    
+    // Get known questions from the bank for this difficulty (for real data mapping)
+    const bankQuestions = QUESTION_BANK.filter(q => q.difficulty === difficulty);
+    
+    const totalSteps = config.topics.length;
+    const currentStep = solvedCount; // 0-based index of the next problem
+
+    return (
+      <div className="mb-12 relative">
+        <PhaseHeader 
+          color={themeColor} 
+          title={config.title} 
+          description={config.subtitle} 
+          progress={solvedCount}
+          total={totalSteps}
+        />
+        
+        <div className="flex flex-col items-center space-y-6 relative py-4 pb-12">
+          
+          {config.topics.map((topicName, index) => {
+            const isSolved = index < solvedCount;
+            const isCurrent = index === currentStep;
+            const isLocked = index > currentStep;
+            
+            // Use the bank title if we have it (so it matches the actual game data), otherwise use the topic name
+            const questionData = bankQuestions[index];
+            const displayTitle = questionData ? questionData.title : topicName;
+
+            // Winding path effect using translation
+            // Zig-zag pattern: 0 -> 0, 1 -> -40, 2 -> 0, 3 -> 40
+            const xOffset = index % 4 === 1 ? -40 : index % 4 === 3 ? 40 : 0;
+            
+            return (
+              <div 
+                key={index} 
+                className="relative group z-10 flex flex-col items-center"
+                style={{ transform: `translateX(${xOffset}px)` }}
+              >
+                 {/* Connector Line */}
+                 {index < totalSteps - 1 && (
+                   <div 
+                      className="absolute top-10 left-1/2 w-2 h-24 -ml-1 -z-10"
+                      style={{ 
+                        height: '90px',
+                        background: isSolved ? themeColor : '#262626',
+                        // Use a slight rotation to connect the zig-zags visually? 
+                        // Keep it simple vertical for now to avoid complexity, sticking to the Duolingo "stepping stone" vibe
+                      }}
+                   ></div>
+                 )}
+
+                 {/* Node Circle */}
+                 <div className={`
+                    w-20 h-20 rounded-full flex items-center justify-center border-b-4 transition-all duration-300
+                    ${isSolved ? 'bg-neutral-800 border-neutral-950 cursor-pointer ring-4' : ''}
+                    ${isCurrent ? `${themeColor} border-black/20 cursor-pointer active:border-b-0 active:translate-y-1 shadow-[0_0_30px_rgba(255,255,255,0.15)] scale-110` : ''}
+                    ${isLocked ? 'bg-neutral-800 border-neutral-900 cursor-not-allowed opacity-80' : ''}
+                 `}
+                 style={{
+                    // Dynamic ring color for solved items
+                    '--tw-ring-color': isSolved ? themeColor : 'transparent'
+                 } as React.CSSProperties}
+                 >
+                    {isSolved && <Check className="w-10 h-10" style={{ color: themeColor }} strokeWidth={4} />}
+                    {isCurrent && (
+                      <div className="relative">
+                         <Star className="w-10 h-10 text-white fill-current animate-pulse" />
+                         {/* "START" Bubble */}
+                         <div className="absolute -top-16 left-1/2 -translate-x-1/2 bg-white text-black text-sm font-extrabold px-4 py-2 rounded-xl whitespace-nowrap shadow-xl animate-bounce z-20 border-2 border-neutral-200">
+                           START
+                           <div className="absolute bottom-[-6px] left-1/2 -translate-x-1/2 w-3 h-3 bg-white rotate-45 border-b-2 border-r-2 border-neutral-200"></div>
+                         </div>
+                      </div>
+                    )}
+                    {isLocked && <Lock className="w-8 h-8 text-neutral-600" />}
+                 </div>
+                 
+                 {/* Label */}
+                 <div className={`mt-3 px-4 py-2 rounded-xl border transition-colors text-center max-w-[160px]
+                    ${isCurrent ? 'bg-neutral-800 border-neutral-600' : 'bg-neutral-900/80 border-neutral-800'}
+                 `}>
+                    <span className={`text-xs font-bold uppercase tracking-wider block mb-1 ${isSolved ? 'text-green-500' : 'text-neutral-500'}`}>
+                        {isSolved ? 'Completed' : isLocked ? 'Locked' : 'Next Challenge'}
+                    </span>
+                    <span className={`text-sm font-bold leading-tight ${isLocked ? 'text-neutral-600' : 'text-white'}`}>
+                       {displayTitle}
+                    </span>
+                 </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="bg-neutral-900 w-full max-w-5xl h-[90vh] rounded-2xl border border-neutral-800 shadow-2xl flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in font-sans">
+      <div className="bg-[#131f24] w-full max-w-4xl h-[90vh] rounded-3xl border-2 border-neutral-800 shadow-2xl flex flex-col overflow-hidden relative">
         
         {/* Header */}
-        <div className="p-6 border-b border-neutral-800 flex items-center justify-between bg-neutral-900">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-yellow-600/20 rounded-lg">
-              <Trophy className="w-6 h-6 text-yellow-500" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-white">Interview Prep Hub</h2>
-              <p className="text-xs text-neutral-400">Track your journey to Google</p>
-            </div>
+        <div className="p-4 border-b border-neutral-800 bg-[#131f24] flex items-center justify-between shrink-0 z-20 relative">
+          <div className="flex items-center gap-6">
+             <button onClick={onClose} className="hover:bg-neutral-800 p-2 rounded-full transition-colors">
+                <X className="w-6 h-6 text-neutral-400 hover:text-white" />
+             </button>
+             <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <Map className="w-5 h-5 text-blue-500" />
+                Interview Prep 75
+             </h2>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-neutral-800 rounded-full transition-colors text-neutral-400 hover:text-white">
-            <X className="w-6 h-6" />
-          </button>
+           {/* Stats Bar */}
+           <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-neutral-900 border border-neutral-800">
+                  <Zap className="w-5 h-5 text-yellow-400 fill-current" />
+                  <span className="font-bold text-yellow-400">{stats.streak} Day Streak</span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-neutral-900 border border-neutral-800">
+                  <Crown className="w-5 h-5 text-blue-400" />
+                  <span className="font-bold text-blue-400">{stats.totalSolved} Solved</span>
+              </div>
+           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex border-b border-neutral-800 bg-neutral-900/50">
+        {/* Tabs (Sticky-ish) */}
+        <div className="flex border-b border-neutral-800 bg-[#131f24] shrink-0 z-20">
           <button 
             onClick={() => setActiveTab('path')}
-            className={`flex-1 py-4 text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors ${activeTab === 'path' ? 'border-blue-500 text-blue-400 bg-blue-900/10' : 'border-transparent text-neutral-400 hover:text-neutral-200'}`}
+            className={`flex-1 py-4 text-sm font-extrabold tracking-widest flex items-center justify-center gap-2 border-b-4 transition-all uppercase
+              ${activeTab === 'path' ? 'border-blue-500 text-blue-400 bg-blue-900/10' : 'border-transparent text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800/30'}
+            `}
           >
-            <Target className="w-4 h-4" /> Learning Path
+            Learning Path
           </button>
           <button 
             onClick={() => setActiveTab('review')}
-            className={`flex-1 py-4 text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors ${activeTab === 'review' ? 'border-green-500 text-green-400 bg-green-900/10' : 'border-transparent text-neutral-400 hover:text-neutral-200'}`}
+            className={`flex-1 py-4 text-sm font-extrabold tracking-widest flex items-center justify-center gap-2 border-b-4 transition-all uppercase
+              ${activeTab === 'review' ? 'border-green-500 text-green-400 bg-green-900/10' : 'border-transparent text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800/30'}
+            `}
           >
-            <BookOpen className="w-4 h-4" /> Review Notes
+            Review Guide
           </button>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar bg-neutral-950 p-6">
+        {/* Content Area */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar bg-[#131f24] p-6 relative">
           
           {activeTab === 'path' && (
-            <div className="space-y-8">
-              {/* Overall Progress */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 bg-neutral-900 rounded-xl p-6 border border-neutral-800">
-                  <div className="flex justify-between items-end mb-2">
-                    <h3 className="text-lg font-semibold text-white">Google Readiness</h3>
-                    <span className="text-3xl font-bold text-blue-500">{stats.overallProgress}%</span>
-                  </div>
-                  <div className="w-full bg-neutral-800 rounded-full h-4 overflow-hidden">
-                    <div 
-                      className="bg-blue-600 h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(37,99,235,0.5)]" 
-                      style={{ width: `${stats.overallProgress}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-sm text-neutral-500 mt-2">
-                    {stats.totalSolved} solved out of {GOALS.Easy + GOALS.Medium + GOALS.Hard} recommended core problems.
-                  </p>
-                  
-                  <div className="mt-6 grid grid-cols-3 gap-4">
-                    {(['Easy', 'Medium', 'Hard'] as const).map(diff => {
-                        const current = stats.counts[diff];
-                        const goal = GOALS[diff];
-                        const color = diff === 'Easy' ? 'green' : diff === 'Medium' ? 'yellow' : 'red';
-                        return (
-                            <div key={diff} className="text-center">
-                                <div className={`text-xs uppercase font-bold text-${color}-500 mb-1`}>{diff}</div>
-                                <div className="text-xl font-mono text-white">{current}/{goal}</div>
-                            </div>
-                        )
-                    })}
-                  </div>
-                </div>
-
-                {/* Topic Cloud */}
-                <div className="bg-neutral-900 rounded-xl p-6 border border-neutral-800">
-                   <h3 className="text-base font-semibold text-white mb-4 flex items-center gap-2">
-                        <Star className="w-4 h-4 text-yellow-500" /> Mastery Areas
-                   </h3>
-                   <div className="flex flex-wrap gap-2">
-                     {Object.entries(stats.topics).length === 0 && (
-                       <p className="text-neutral-500 text-sm italic">Solve questions to unlock topics.</p>
-                     )}
-                     {Object.entries(stats.topics).map(([topic, count]) => (
-                       <span key={topic} className="px-3 py-1 rounded-full bg-neutral-800 border border-neutral-700 text-neutral-300 text-xs flex items-center gap-2">
-                         {topic}
-                         <span className="bg-neutral-700 px-1.5 py-0.5 rounded-full text-[10px] text-white">{count}</span>
-                       </span>
-                     ))}
-                   </div>
-                </div>
-              </div>
-
-              {/* Detailed Roadmap */}
-              <div>
-                 <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                    <Map className="w-5 h-5 text-blue-500" /> 
-                    Your Quest Log
-                 </h3>
-                 <div className="space-y-6">
-                    {(['Easy', 'Medium', 'Hard'] as const).map(diff => {
-                       const solved = history.filter(h => h.question.difficulty === diff);
-                       const total = GOALS[diff];
-                       const colorClass = diff === 'Easy' ? 'border-l-green-500' : diff === 'Medium' ? 'border-l-yellow-500' : 'border-l-red-500';
-                       const textClass = diff === 'Easy' ? 'text-green-500' : diff === 'Medium' ? 'text-yellow-500' : 'text-red-500';
-
-                       return (
-                         <div key={diff} className={`bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden`}>
-                            <div className={`px-4 py-3 border-b border-neutral-800 bg-neutral-900 flex justify-between items-center border-l-4 ${colorClass}`}>
-                                <h4 className="font-bold text-neutral-200">{diff} Track</h4>
-                                <span className="text-xs text-neutral-500">{solved.length} of {total} Completed</span>
-                            </div>
-                            
-                            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                                {/* Render Solved Items */}
-                                {solved.map((item) => (
-                                    <div key={item.id} className="flex flex-col p-3 rounded-lg bg-neutral-900 border border-neutral-800/80 shadow-sm group hover:border-neutral-700 transition-colors">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <CheckCircle2 className={`w-5 h-5 ${textClass}`} />
-                                            <span className="text-[10px] bg-neutral-800 px-1.5 py-0.5 rounded text-neutral-400 truncate max-w-[80px]">{item.question.topic || 'Algo'}</span>
-                                        </div>
-                                        <div className="text-sm font-medium text-neutral-200 truncate" title={item.question.title}>{item.question.title}</div>
-                                        <div className="text-xs text-neutral-500 mt-1">Solved {new Date(item.dateSolved).toLocaleDateString()}</div>
-                                    </div>
-                                ))}
-                                
-                                {/* Render Next Available Slot */}
-                                {solved.length < total && (
-                                    <div className="flex flex-col p-3 rounded-lg bg-blue-900/10 border border-blue-900/30 border-dashed relative overflow-hidden">
-                                        <div className="absolute top-0 right-0 p-1">
-                                            <div className="w-2 h-2 bg-blue-500 rounded-full animate-ping"></div>
-                                        </div>
-                                        <div className="flex justify-between items-start mb-2">
-                                            <div className="w-5 h-5 rounded-full border-2 border-blue-500/50 flex items-center justify-center">
-                                                 <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                                            </div>
-                                        </div>
-                                        <div className="text-sm font-medium text-blue-200">Next Challenge</div>
-                                        <div className="text-xs text-blue-400/60 mt-1">Ready to start</div>
-                                    </div>
-                                )}
-
-                                {/* Render Locked Slots (limit to show context but not overwhelm) */}
-                                {Array.from({ length: Math.min(total - solved.length - 1, 7) }).map((_, idx) => (
-                                     <div key={idx} className="flex flex-col p-3 rounded-lg bg-neutral-900/20 border border-neutral-800/30 opacity-50">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <Lock className="w-4 h-4 text-neutral-700" />
-                                        </div>
-                                        <div className="h-4 w-20 bg-neutral-800 rounded mb-1"></div>
-                                        <div className="h-2 w-12 bg-neutral-800 rounded"></div>
-                                    </div>
-                                ))}
-                                
-                                {total - solved.length - 1 > 7 && (
-                                    <div className="flex items-center justify-center p-3 rounded-lg text-xs text-neutral-600 italic bg-neutral-900/10 border border-neutral-800/20">
-                                        +{total - solved.length - 8} more
-                                    </div>
-                                )}
-                            </div>
-                         </div>
-                       )
-                    })}
-                 </div>
+            <div className="max-w-lg mx-auto">
+              <RoadmapPhase 
+                 difficulty="Easy" 
+                 themeColor="#58cc02" 
+              />
+              <RoadmapPhase 
+                 difficulty="Medium" 
+                 themeColor="#ce82ff" 
+              />
+              <RoadmapPhase 
+                 difficulty="Hard" 
+                 themeColor="#ff4b4b" 
+              />
+              
+              <div className="text-center py-16 opacity-50">
+                <Trophy className="w-20 h-20 text-yellow-500 mx-auto mb-4 grayscale" />
+                <h3 className="text-xl font-bold text-white">Certification Pending</h3>
+                <p className="text-sm text-neutral-400">Complete all phases to unlock</p>
               </div>
             </div>
           )}
 
           {activeTab === 'review' && (
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
               {history.length === 0 ? (
-                <div className="text-center py-12 text-neutral-500">
-                  <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                  <p>No review notes yet.</p>
-                  <p className="text-sm">Complete puzzles to build your personal knowledge base.</p>
+                <div className="col-span-full text-center py-20 text-neutral-500">
+                  <div className="bg-neutral-800 w-24 h-24 rounded-3xl mx-auto mb-4 flex items-center justify-center rotate-12">
+                     <BookOpen className="w-12 h-12 opacity-50" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2">Your guidebook is empty</h3>
+                  <p>Solve puzzles in the Learning Path to fill this library with solutions!</p>
                 </div>
               ) : (
                 history.slice().reverse().map((item) => (
-                  <div key={item.id} className="bg-neutral-900 rounded-xl border border-neutral-800 overflow-hidden transition-colors hover:border-neutral-700">
+                  <div 
+                    key={item.id} 
+                    className="bg-[#1f2937] rounded-2xl border-2 border-neutral-800 overflow-hidden hover:-translate-y-1 hover:border-blue-500/50 hover:shadow-xl transition-all duration-200 group"
+                  >
                     <div 
                       onClick={() => setExpandedItem(expandedItem === item.id ? null : item.id)}
-                      className="p-4 flex items-center justify-between cursor-pointer bg-neutral-900 hover:bg-neutral-800/50"
+                      className="p-5 cursor-pointer"
                     >
-                      <div className="flex items-center gap-4">
-                         <div className={`w-2 h-2 rounded-full ${
-                           item.question.difficulty === 'Easy' ? 'bg-green-500' : 
-                           item.question.difficulty === 'Medium' ? 'bg-yellow-500' : 'bg-red-500'
-                         }`}></div>
-                         <div>
-                           <h4 className="font-semibold text-neutral-200">{item.question.title}</h4>
-                           <div className="flex items-center gap-3 text-xs text-neutral-500 mt-0.5">
-                              <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {new Date(item.dateSolved).toLocaleDateString()}</span>
-                              <span>•</span>
-                              <span>{item.question.topic}</span>
-                           </div>
-                         </div>
-                      </div>
-                      {expandedItem === item.id ? <ChevronUp className="w-4 h-4 text-neutral-500" /> : <ChevronDown className="w-4 h-4 text-neutral-500" />}
+                       <div className="flex justify-between items-start mb-3">
+                          <span className={`px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider border-b-2 
+                             ${item.question.difficulty === 'Easy' ? 'bg-green-500/20 text-green-400 border-green-500/50' : 
+                               item.question.difficulty === 'Medium' ? 'bg-purple-500/20 text-purple-400 border-purple-500/50' : 
+                               'bg-red-500/20 text-red-400 border-red-500/50'
+                             }`}>
+                             {item.question.difficulty}
+                          </span>
+                          <span className="text-xs font-mono text-neutral-500">{new Date(item.dateSolved).toLocaleDateString()}</span>
+                       </div>
+                       
+                       <h4 className="font-bold text-lg text-white mb-1 group-hover:text-blue-400 transition-colors">{item.question.title}</h4>
+                       <p className="text-sm text-neutral-400">{item.question.topic}</p>
+                    </div>
+
+                    {/* Expandable Section */}
+                    <div className={`
+                       border-t-2 border-neutral-800 bg-neutral-900/50 transition-all duration-300 overflow-hidden
+                       ${expandedItem === item.id ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}
+                    `}>
+                       <div className="p-5 text-sm overflow-y-auto max-h-[400px]">
+                          <MarkdownLite content={item.question.explanation} />
+                       </div>
                     </div>
                     
-                    {expandedItem === item.id && (
-                      <div className="border-t border-neutral-800 bg-neutral-950/50 p-6 animate-fade-in">
-                         <div className="mb-6">
-                           <h5 className="text-xs uppercase tracking-wider text-neutral-500 font-semibold mb-2">Problem Description</h5>
-                           <p className="text-sm text-neutral-300 leading-relaxed">{item.question.description}</p>
-                         </div>
-                         <div>
-                           <h5 className="text-xs uppercase tracking-wider text-neutral-500 font-semibold mb-2">Solution Notes</h5>
-                           <div className="bg-neutral-900/50 rounded-lg p-4 border border-neutral-800">
-                              <MarkdownLite content={item.question.explanation} />
-                           </div>
-                         </div>
-                      </div>
-                    )}
+                    {/* Expand Button Strip */}
+                    <button 
+                       onClick={(e) => {
+                         e.stopPropagation();
+                         setExpandedItem(expandedItem === item.id ? null : item.id);
+                       }}
+                       className="w-full py-2 bg-neutral-800/50 hover:bg-neutral-800 flex items-center justify-center text-neutral-500 group-hover:text-white transition-colors"
+                    >
+                       {expandedItem === item.id ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                    </button>
                   </div>
                 ))
               )}
